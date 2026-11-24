@@ -1,0 +1,66 @@
+name: Closed Test 20 - 5 Hours
+on:
+  workflow_dispatch:
+    inputs:
+      apk_url:
+        description: "Direct download URL of the APK to install"
+        required: true
+jobs:
+  closed-test:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { label: "api29-pixel",   api: 29, profile: "pixel" }
+          - { label: "api29-nexus5",  api: 29, profile: "Nexus 5" }
+          - { label: "api29-pixel3",  api: 29, profile: "pixel_3" }
+          - { label: "api30-pixel",   api: 30, profile: "pixel" }
+          - { label: "api30-nexus5",  api: 30, profile: "Nexus 5" }
+          - { label: "api30-pixel2",  api: 30, profile: "pixel_2" }
+          - { label: "api31-pixel",   api: 31, profile: "pixel" }
+          - { label: "api31-pixel2",  api: 31, profile: "pixel_2" }
+          - { label: "api31-nexus6",  api: 31, profile: "Nexus 6" }
+          - { label: "api32-pixel",   api: 32, profile: "pixel" }
+          - { label: "api32-nexus5",  api: 32, profile: "Nexus 5" }
+          - { label: "api32-pixel3",  api: 32, profile: "pixel_3" }
+          - { label: "api33-pixel",   api: 33, profile: "pixel" }
+          - { label: "api33-pixel2",  api: 33, profile: "pixel_2" }
+          - { label: "api33-nexus5x", api: 33, profile: "Nexus 5X" }
+          - { label: "api33-nexus6",  api: 33, profile: "Nexus 6" }
+          - { label: "api34-pixel",   api: 34, profile: "pixel" }
+          - { label: "api34-pixel2",  api: 34, profile: "pixel_2" }
+          - { label: "api34-pixel3",  api: 34, profile: "pixel_3" }
+          - { label: "api34-nexus5",  api: 34, profile: "Nexus 5" }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run 5-hour session (fixed)
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          APK_URL: ${{ inputs.apk_url }}
+          PKG: "com.paradox.dscm"
+          LABEL: ${{ matrix.label }}
+          API: ${{ matrix.api }}
+          PROFILE: ${{ matrix.profile }}
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: ${{ matrix.profile }}
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: python3 scripts/session20_long.py
+      - name: Upload screenshots and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: closed-test-${{ matrix.label }}
+          path: output/
+          if-no-files-found: warn
